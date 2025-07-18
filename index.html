@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Survey App</title> <!-- Title updated -->
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better aesthetics and responsiveness */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1.5rem; /* More rounded corners */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 600px; /* Adjusted max-width as map is removed */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        video, img {
+            border-radius: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%; /* Make video and image responsive */
+            max-width: 640px; /* Max width for video/image */
+            height: auto;
+            background-color: #e2e8f0; /* Placeholder background */
+        }
+        canvas {
+            display: none; /* Canvas is used for capturing, not displaying */
+        }
+        button {
+            transition: all 0.2s ease-in-out;
+            transform: translateY(0);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .info-box {
+            background-color: #edf2f7;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            width: 100%;
+            text-align: center;
+            font-size: 0.95rem;
+            color: #4a5568;
+        }
+        .message-box {
+            background-color: #fff3cd; /* Warning yellow */
+            color: #856404;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            border: 1px solid #ffeeba;
+            display: none; /* Hidden by default */
+        }
+        /* #map is removed */
+        .captured-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            background-color: #f7fafc;
+            width: 100%;
+        }
+        .captured-details p {
+            margin: 0;
+            padding: 0.25rem 0;
+            color: #2d3748;
+        }
+        .captured-details p strong {
+            color: #1a202c;
+        }
+
+        /* Responsive adjustments */
+        @media (min-width: 640px) {
+            .flex-row-desktop {
+                flex-direction: row;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="container">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Photo Survey App</h1> <!-- Title updated -->
+
+        <!-- Message Box for user feedback -->
+        <div id="messageBox" class="message-box"></div>
+
+        <!-- Video element for camera feed -->
+        <video id="cameraFeed" class="w-full max-w-md rounded-xl shadow-lg bg-gray-200" autoplay playsinline></video>
+
+        <!-- Canvas for capturing photo -->
+        <canvas id="photoCanvas" class="hidden"></canvas>
+
+        <!-- Image element for displaying captured photo -->
+        <img id="capturedPhoto" class="w-full max-w-md rounded-xl shadow-lg bg-gray-200 hidden" alt="Captured Photo">
+
+        <!-- Location Information Display -->
+        <div class="info-box">
+            <p class="text-gray-700 font-semibold">Current Location:</p>
+            <p id="latitude" class="text-gray-600">Latitude: N/A</p>
+            <p id="longitude" class="text-gray-600">Longitude: N/A</p>
+            <!-- Removed Accuracy Span -->
+            <!-- Removed Area Name Span -->
+            <p id="dateTime" class="text-gray-600">Date & Time: N/A</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 w-full justify-center">
+            <button id="startCameraButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                Start Camera
+            </button>
+            <button id="takePhotoButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75" disabled>
+                Take Photo
+            </button>
+            <button id="retakePhotoButton"
+                class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-75 hidden">
+                Retake Photo
+            </button>
+        </div>
+
+        <!-- #map div is removed -->
+
+        <!-- Display Captured Photo Details -->
+        <div id="capturedPhotoDetails" class="captured-details hidden">
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Last Captured Photo Details:</h2>
+            <p><strong>Latitude:</strong> <span id="lastLat">N/A</span></p>
+            <p><strong>Longitude:</strong> <span id="lastLon">N/A</span></p>
+            <!-- Removed Last Area Name Span -->
+            <p><strong>Date & Time:</strong> <span id="lastDateTime">N/A</span></p>
+            <!-- Removed Last Accuracy Span -->
+        </div>
+    </div>
+
+    <script>
+        // DOM element references
+        const cameraFeed = document.getElementById('cameraFeed');
+        const photoCanvas = document.getElementById('photoCanvas');
+        const capturedPhoto = document.getElementById('capturedPhoto');
+        const startCameraButton = document.getElementById('startCameraButton');
+        const takePhotoButton = document.getElementById('takePhotoButton');
+        const retakePhotoButton = document.getElementById('retakePhotoButton');
+        const latitudeSpan = document.getElementById('latitude');
+        const longitudeSpan = document.getElementById('longitude');
+        // Removed accuracySpan reference
+        // Removed areaNameSpan reference
+        const dateTimeSpan = document.getElementById('dateTime');
+        const messageBox = document.getElementById('messageBox');
+        const capturedPhotoDetails = document.getElementById('capturedPhotoDetails');
+        const lastLatSpan = document.getElementById('lastLat');
+        const lastLonSpan = document.getElementById('lastLon');
+        // Removed lastAreaNameSpan reference
+        const lastDateTimeSpan = document.getElementById('lastDateTime');
+        // Removed lastAccuracySpan reference
+
+        let mediaStream = null;
+        let currentLatitude = 'N/A';
+        let currentLongitude = 'N/A';
+        // Removed currentAccuracy variable
+        // Removed currentAreaName variable
+        let currentDateTime = 'N/A';
+
+        // Removed map and marker variables
+
+        // Removed API key constants
+
+        let lastCoords = {lat: null, lng: null};
+        let gettingLocation = false;
+
+        /**
+         * Displays a message in the message box.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success', 'error', 'warning'.
+         */
+        function showMessage(message, type) {
+            messageBox.textContent = message;
+            messageBox.className = 'message-box'; // Reset classes
+            messageBox.style.display = 'block'; // Show the box
+
+            switch (type) {
+                case 'success':
+                    messageBox.classList.add('bg-green-100', 'text-green-800', 'border-green-200');
+                    break;
+                case 'error':
+                    messageBox.classList.add('bg-red-100', 'text-red-800', 'border-red-200');
+                    break;
+                case 'warning':
+                default:
+                    messageBox.classList.add('bg-yellow-100', 'text-yellow-800', 'border-yellow-200');
+                    break;
+            }
+
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000);
+        }
+
+        /**
+         * Starts the camera feed.
+         */
+        async function startCamera() {
+            // Stop any existing camera stream
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+
+            try {
+                // Request access to the user's camera
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                cameraFeed.srcObject = mediaStream;
+                cameraFeed.style.display = 'block'; // Show video feed
+                capturedPhoto.style.display = 'none'; // Hide captured photo
+                takePhotoButton.disabled = false; // Enable take photo button
+                startCameraButton.textContent = 'Camera On';
+                startCameraButton.disabled = true; // Disable start camera button once started
+                showMessage('Camera started successfully!', 'success');
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                showMessage('Failed to start camera. Please ensure camera access is granted.', 'error');
+                takePhotoButton.disabled = true; // Keep take photo button disabled
+                startCameraButton.disabled = false; // Allow retrying
+                startCameraButton.textContent = 'Start Camera';
+            }
+        }
+
+        /**
+         * Resets the view to allow retaking a photo.
+         */
+        function retakePhoto() {
+            cameraFeed.style.display = 'block'; // Show camera feed
+            capturedPhoto.style.display = 'none'; // Hide captured photo
+            capturedPhotoDetails.classList.add('hidden'); // Hide captured details
+            startCameraButton.disabled = true; // Keep camera on, so disable start button
+            startCameraButton.textContent = 'Camera On'; // Keep text consistent
+            takePhotoButton.disabled = false; // Enable take photo button
+            retakePhotoButton.classList.add('hidden'); // Hide retake button
+            // Optionally restart camera to ensure it's active, though it should be if mediaStream is not null
+            if (!mediaStream) {
+                startCamera();
+            }
+        }
+
+        /**
+         * Gets the current geolocation coordinates.
+         * @param {boolean} force - If true, forces a new geolocation lookup even if coordinates haven't changed.
+         */
+        function getGeolocation(force = false) {
+            if (gettingLocation && !force) return; // Prevent multiple requests unless forced
+
+            gettingLocation = true;
+            if (navigator.geolocation) {
+                showMessage('Fetching location...', 'warning');
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const lat = Number(position.coords.latitude.toFixed(6));
+                        const lng = Number(position.coords.longitude.toFixed(6));
+
+                        // Only update if coordinates have significantly changed or if forced
+                        if (!force && lat === lastCoords.lat && lng === lastCoords.lng) {
+                            gettingLocation = false;
+                            showMessage('Location is current.', 'success'); // Indicate no new update needed
+                            return;
+                        }
+
+                        lastCoords = {lat, lng}; // Update last known coordinates
+                        currentLatitude = lat;
+                        currentLongitude = lng;
+                        // Removed currentAccuracy update
+                        currentDateTime = new Date().toLocaleString();
+
+                        latitudeSpan.textContent = `Latitude: ${currentLatitude}`;
+                        longitudeSpan.textContent = `Longitude: ${currentLongitude}`;
+                        dateTimeSpan.textContent = `Date & Time: ${currentDateTime}`;
+
+                        showMessage('Location updated!', 'success');
+                        gettingLocation = false;
+                    },
+                    (error) => {
+                        console.error('Error getting location:', error);
+                        let errorMessage = 'Failed to get location.';
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage += ' Please allow location access.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage += ' Location information is unavailable.';
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage += ' The request to get user location timed out.';
+                                break;
+                            default:
+                                errorMessage += ' An unknown error occurred.';
+                                break;
+                        }
+                        showMessage(errorMessage, 'error');
+                        latitudeSpan.textContent = 'Latitude: N/A';
+                        longitudeSpan.textContent = 'Longitude: N/A';
+                        // Removed accuracySpan update
+                        // Removed areaNameSpan update
+                        dateTimeSpan.textContent = 'Date & Time: N/A';
+                        gettingLocation = false;
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000, // 10 seconds
+                        maximumAge: 0 // No cached position
+                    }
+                );
+            } else {
+                showMessage('Geolocation is not supported by your browser.', 'error');
+                latitudeSpan.textContent = 'Latitude: Not Supported';
+                longitudeSpan.textContent = 'Longitude: Not Supported';
+                // Removed accuracySpan update
+                // Removed areaNameSpan update
+                dateTimeSpan.textContent = 'Date & Time: Not Supported';
+                gettingLocation = false;
+            }
+        }
+
+        // Removed getAreaName function
+
+        /**
+         * Captures a photo from the video feed and displays it, along with all collected details.
+         */
+        function takePhoto() {
+            if (!mediaStream) {
+                showMessage('Camera not active. Please start the camera first.', 'warning');
+                return;
+            }
+
+            // Set canvas dimensions to match video feed
+            photoCanvas.width = cameraFeed.videoWidth;
+            photoCanvas.height = cameraFeed.videoHeight;
+
+            const context = photoCanvas.getContext('2d');
+            // Draw the current video frame onto the canvas
+            context.drawImage(cameraFeed, 0, 0, photoCanvas.width, photoCanvas.height);
+
+            // Get the image data from the canvas
+            const imageDataURL = photoCanvas.toDataURL('image/png');
+
+            // Display the captured image
+            capturedPhoto.src = imageDataURL;
+            capturedPhoto.style.display = 'block'; // Show the captured photo
+            cameraFeed.style.display = 'none'; // Hide the camera feed
+
+            // Update last captured photo details
+            lastLatSpan.textContent = currentLatitude;
+            lastLonSpan.textContent = currentLongitude;
+            // Removed lastAreaNameSpan update
+            lastDateTimeSpan.textContent = currentDateTime;
+            // Removed lastAccuracySpan update
+            capturedPhotoDetails.classList.remove('hidden'); // Show the details box
+
+            // Log or use the photo data and coordinates
+            console.log('Photo captured!');
+            console.log('Latitude:', currentLatitude);
+            console.log('Longitude:', currentLongitude);
+            // Removed console.log for Area Name
+            console.log('Date & Time:', currentDateTime);
+            // Removed console.log for Accuracy
+            // console.log('Image Data URL:', imageDataURL.substring(0, 100) + '...'); // Log first 100 chars
+
+            showMessage('Photo captured with all details!', 'success');
+        }
+
+        // Event Listeners
+        startCameraButton.addEventListener('click', startCamera);
+        takePhotoButton.addEventListener('click', () => {
+            // Force a location update immediately before taking photo to get the most current data
+            getGeolocation(true);
+            // Add a small delay to allow geolocation to update before the photo is taken
+            // This is a heuristic; actual time needed may vary based on device/network.
+            setTimeout(takePhoto, 600);
+        });
+        retakePhotoButton.addEventListener('click', retakePhoto);
+
+        // Removed Google Map initialization (initMap)
+        // Removed window.initMap = initMap;
+
+        /**
+         * Removed Dynamically loads the Google Maps JavaScript API script.
+         */
+        // Removed loadGoogleMapsScript function
+
+        // Initial setup when the page loads
+        // Starts initial geolocation updates
+        // Removed loadGoogleMapsScript();
+        getGeolocation(true);
+        // Periodically update geolocation every 5 seconds.
+        // These updates are not forced unless the coordinates actually change.
+        setInterval(() => getGeolocation(false), 5000);
+    </script>
+</body>
+</html>
