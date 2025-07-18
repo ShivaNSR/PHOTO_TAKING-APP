@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photo Survey App</title> <!-- Title updated -->
+    <title>Photo Survey App</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -74,7 +74,6 @@
             border: 1px solid #ffeeba;
             display: none; /* Hidden by default */
         }
-        /* #map is removed */
         .captured-details {
             display: flex;
             flex-direction: column;
@@ -105,7 +104,7 @@
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
     <div class="container">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">Photo Survey App</h1> <!-- Title updated -->
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Photo Survey App</h1>
 
         <!-- Message Box for user feedback -->
         <div id="messageBox" class="message-box"></div>
@@ -124,8 +123,6 @@
             <p class="text-gray-700 font-semibold">Current Location:</p>
             <p id="latitude" class="text-gray-600">Latitude: N/A</p>
             <p id="longitude" class="text-gray-600">Longitude: N/A</p>
-            <!-- Removed Accuracy Span -->
-            <!-- Removed Area Name Span -->
             <p id="dateTime" class="text-gray-600">Date & Time: N/A</p>
         </div>
 
@@ -143,16 +140,12 @@
             </button>
         </div>
 
-        <!-- #map div is removed -->
-
         <!-- Display Captured Photo Details -->
         <div id="capturedPhotoDetails" class="captured-details hidden">
             <h2 class="text-xl font-bold text-gray-800 mb-2">Last Captured Photo Details:</h2>
             <p><strong>Latitude:</strong> <span id="lastLat">N/A</span></p>
             <p><strong>Longitude:</strong> <span id="lastLon">N/A</span></p>
-            <!-- Removed Last Area Name Span -->
             <p><strong>Date & Time:</strong> <span id="lastDateTime">N/A</span></p>
-            <!-- Removed Last Accuracy Span -->
         </div>
     </div>
 
@@ -166,27 +159,17 @@
         const retakePhotoButton = document.getElementById('retakePhotoButton');
         const latitudeSpan = document.getElementById('latitude');
         const longitudeSpan = document.getElementById('longitude');
-        // Removed accuracySpan reference
-        // Removed areaNameSpan reference
         const dateTimeSpan = document.getElementById('dateTime');
         const messageBox = document.getElementById('messageBox');
         const capturedPhotoDetails = document.getElementById('capturedPhotoDetails');
         const lastLatSpan = document.getElementById('lastLat');
         const lastLonSpan = document.getElementById('lastLon');
-        // Removed lastAreaNameSpan reference
         const lastDateTimeSpan = document.getElementById('lastDateTime');
-        // Removed lastAccuracySpan reference
 
         let mediaStream = null;
         let currentLatitude = 'N/A';
         let currentLongitude = 'N/A';
-        // Removed currentAccuracy variable
-        // Removed currentAreaName variable
         let currentDateTime = 'N/A';
-
-        // Removed map and marker variables
-
-        // Removed API key constants
 
         let lastCoords = {lat: null, lng: null};
         let gettingLocation = false;
@@ -221,46 +204,72 @@
         }
 
         /**
-         * Starts the camera feed.
+         * Starts the camera feed, prioritizing the back camera and handling errors.
          */
         async function startCamera() {
-            // Stop any existing camera stream
+            // Stop any existing camera stream to ensure a fresh start
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null; // Clear the stream reference
             }
 
+            // Reset UI state for camera start
+            cameraFeed.style.display = 'block'; // Ensure video element is visible
+            capturedPhoto.style.display = 'none'; // Ensure captured photo is hidden
+            takePhotoButton.disabled = true; // Disable until stream is ready
+            startCameraButton.textContent = 'Starting Camera...';
+            startCameraButton.disabled = true; // Disable while starting
+            showMessage('Starting camera...', 'warning');
+
             try {
-                // Request access to the user's camera
-                mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // Attempt to get the back camera (environment facing)
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 cameraFeed.srcObject = mediaStream;
-                cameraFeed.style.display = 'block'; // Show video feed
-                capturedPhoto.style.display = 'none'; // Hide captured photo
-                takePhotoButton.disabled = false; // Enable take photo button
-                startCameraButton.textContent = 'Camera On';
-                startCameraButton.disabled = true; // Disable start camera button once started
-                showMessage('Camera started successfully!', 'success');
+                // Ensure video starts playing when srcObject is set
+                cameraFeed.play();
+                takePhotoButton.disabled = false;
+                startCameraButton.textContent = 'Camera On (Back)';
+                showMessage('Back camera started successfully!', 'success');
             } catch (error) {
                 console.error('Error accessing camera:', error);
-                showMessage('Failed to start camera. Please ensure camera access is granted.', 'error');
-                takePhotoButton.disabled = true; // Keep take photo button disabled
-                startCameraButton.disabled = false; // Allow retrying
+                // Handle specific errors for better user feedback
+                if (error.name === 'OverconstrainedError' || error.name === 'NotFoundError') {
+                    showMessage('No back camera found on this device.', 'error');
+                } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    showMessage('Camera access denied. Please allow camera permissions in your browser settings.', 'error');
+                } else {
+                    showMessage('An unexpected error occurred while starting the camera.', 'error');
+                }
+                // Reset buttons and clear stream on failure
                 startCameraButton.textContent = 'Start Camera';
+                startCameraButton.disabled = false; // Allow retry
+                takePhotoButton.disabled = true;
+                mediaStream = null;
             }
         }
 
         /**
-         * Resets the view to allow retaking a photo.
+         * Resets the view to allow retaking a photo, ensuring the live camera feed resumes.
          */
         function retakePhoto() {
-            cameraFeed.style.display = 'block'; // Show camera feed
-            capturedPhoto.style.display = 'none'; // Hide captured photo
+            // Ensure camera feed is visible and photo is hidden
+            cameraFeed.style.display = 'block';
+            capturedPhoto.style.display = 'none';
             capturedPhotoDetails.classList.add('hidden'); // Hide captured details
-            startCameraButton.disabled = true; // Keep camera on, so disable start button
-            startCameraButton.textContent = 'Camera On'; // Keep text consistent
-            takePhotoButton.disabled = false; // Enable take photo button
-            retakePhotoButton.classList.add('hidden'); // Hide retake button
-            // Optionally restart camera to ensure it's active, though it should be if mediaStream is not null
-            if (!mediaStream) {
+
+            // Re-enable take photo button and hide retake button
+            takePhotoButton.disabled = false;
+            retakePhotoButton.classList.add('hidden');
+
+            // Crucially, ensure the video element is playing the stream again
+            if (mediaStream && mediaStream.active) {
+                cameraFeed.srcObject = mediaStream; // Re-assign srcObject (some browsers might need this)
+                cameraFeed.play(); // Explicitly play the video stream
+                startCameraButton.textContent = 'Camera On'; // Keep text consistent
+                startCameraButton.disabled = true; // Keep disabled if camera is on
+                showMessage('Ready to take another photo!', 'success');
+            } else {
+                // If the stream somehow became inactive or was never started, try to start it again
                 startCamera();
             }
         }
@@ -290,7 +299,6 @@
                         lastCoords = {lat, lng}; // Update last known coordinates
                         currentLatitude = lat;
                         currentLongitude = lng;
-                        // Removed currentAccuracy update
                         currentDateTime = new Date().toLocaleString();
 
                         latitudeSpan.textContent = `Latitude: ${currentLatitude}`;
@@ -320,8 +328,6 @@
                         showMessage(errorMessage, 'error');
                         latitudeSpan.textContent = 'Latitude: N/A';
                         longitudeSpan.textContent = 'Longitude: N/A';
-                        // Removed accuracySpan update
-                        // Removed areaNameSpan update
                         dateTimeSpan.textContent = 'Date & Time: N/A';
                         gettingLocation = false;
                     },
@@ -335,14 +341,10 @@
                 showMessage('Geolocation is not supported by your browser.', 'error');
                 latitudeSpan.textContent = 'Latitude: Not Supported';
                 longitudeSpan.textContent = 'Longitude: Not Supported';
-                // Removed accuracySpan update
-                // Removed areaNameSpan update
                 dateTimeSpan.textContent = 'Date & Time: Not Supported';
                 gettingLocation = false;
             }
         }
-
-        // Removed getAreaName function
 
         /**
          * Captures a photo from the video feed and displays it, along with all collected details.
@@ -352,6 +354,9 @@
                 showMessage('Camera not active. Please start the camera first.', 'warning');
                 return;
             }
+
+            // Pause the camera feed before drawing to canvas to ensure a clear still frame
+            cameraFeed.pause();
 
             // Set canvas dimensions to match video feed
             photoCanvas.width = cameraFeed.videoWidth;
@@ -372,18 +377,14 @@
             // Update last captured photo details
             lastLatSpan.textContent = currentLatitude;
             lastLonSpan.textContent = currentLongitude;
-            // Removed lastAreaNameSpan update
             lastDateTimeSpan.textContent = currentDateTime;
-            // Removed lastAccuracySpan update
             capturedPhotoDetails.classList.remove('hidden'); // Show the details box
 
             // Log or use the photo data and coordinates
             console.log('Photo captured!');
             console.log('Latitude:', currentLatitude);
             console.log('Longitude:', currentLongitude);
-            // Removed console.log for Area Name
             console.log('Date & Time:', currentDateTime);
-            // Removed console.log for Accuracy
             // console.log('Image Data URL:', imageDataURL.substring(0, 100) + '...'); // Log first 100 chars
 
             showMessage('Photo captured with all details!', 'success');
@@ -400,20 +401,11 @@
         });
         retakePhotoButton.addEventListener('click', retakePhoto);
 
-        // Removed Google Map initialization (initMap)
-        // Removed window.initMap = initMap;
-
-        /**
-         * Removed Dynamically loads the Google Maps JavaScript API script.
-         */
-        // Removed loadGoogleMapsScript function
-
         // Initial setup when the page loads
-        // Starts initial geolocation updates
-        // Removed loadGoogleMapsScript();
+        // Starts initial geolocation updates and camera
         getGeolocation(true);
+        startCamera(); // Call startCamera on page load
         // Periodically update geolocation every 5 seconds.
-        // These updates are not forced unless the coordinates actually change.
         setInterval(() => getGeolocation(false), 5000);
     </script>
 </body>
